@@ -1,36 +1,114 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# E-commerce Frontend (Next.js)
 
-## Getting Started
+Aplicación web de comercio electrónico construida con **Next.js (App Router)** y **TypeScript**. Consume la API REST desarrollada en Laravel (`ecommerce-api`) e implementa el flujo completo de compra: catálogo, autenticación, carrito, creación de órdenes, pago con Stripe e historial de compras.
 
-First, run the development server:
+## Tecnologías
+
+- Next.js 16 (App Router) + React + TypeScript
+- Tailwind CSS
+- Server Components para lecturas y Server Actions para mutaciones
+- Token de autenticación guardado en cookie `httpOnly`
+- API REST en Laravel 12 con Sanctum y Stripe: [https://github.com/henrryguz8/ecommerce-api]
+
+## Funcionalidades
+
+- Catálogo público de productos y vista de detalle
+- Registro e inicio de sesión (el token nunca se expone al navegador)
+- Carrito de compras con estado local
+- Creación de órdenes mediante Server Action
+- Pago con Stripe (modo de prueba) y pantalla de confirmación
+- Historial de compras en una ruta protegida
+- Rutas protegidas con `proxy.ts`
+- `loading.tsx` y `error.tsx` en las rutas clave y `Suspense` en el historial
+- `revalidatePath()` tras crear órdenes y pagar, para evitar datos desactualizados
+
+## Requisitos previos
+
+- Node.js 20.9 o superior
+- La API `ecommerce-api` corriendo en local (ver su README)
+
+## Instalación
+
+```bash
+git clone https://github.com/henrryguz8/ecommerce-frontend
+cd ecommerce-frontend
+npm install
+```
+
+## Variables de entorno
+
+Crea un archivo `.env.local` en la raíz del proyecto:
+
+```
+API_URL=http://127.0.0.1:8000/api
+```
+
+La variable no lleva el prefijo `NEXT_PUBLIC_` a propósito, para que la URL de la API solo exista en el servidor.
+
+## Ejecución
+
+Primero levanta la API (en la carpeta `ecommerce-api`):
+
+```bash
+php artisan serve
+```
+
+Luego, en este proyecto:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+La aplicación queda en `http://localhost:3000`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Para la versión de producción:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm run build
+npm run start
+```
 
-## Learn More
+## Rutas principales
 
-To learn more about Next.js, take a look at the following resources:
+| Ruta | Descripción | Protegida |
+|------|-------------|-----------|
+| `/` | Catálogo de productos | No |
+| `/login` | Inicio de sesión y registro | No |
+| `/cart` | Carrito | No |
+| `/checkout` | Resumen y creación de la orden | Sí |
+| `/checkout/payment` | Pago con Stripe | Sí |
+| `/checkout/success` | Confirmación de compra | Sí |
+| `/orders` | Historial de compras | Sí |
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Flujo de compra
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+1. El usuario agrega productos al carrito.
+2. En el checkout, una Server Action envía los productos a `POST /api/orders` con el token.
+3. Con el ID de la orden, la pantalla de pago llama a `POST /api/payments`.
+4. Si el pago se aprueba, se muestra la confirmación, se vacía el carrito y la orden aparece como `paid` en el historial.
 
-## Deploy on Vercel
+## Probar el pago
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+El pago usa el modo de prueba de Stripe. En la pantalla de pago se puede elegir entre tarjetas de prueba (Visa y Mastercard aprobadas, tarjeta rechazada y fondos insuficientes) para verificar tanto el pago exitoso como el manejo de errores.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Rendimiento (Lighthouse)
+
+Las pruebas se realizaron sobre `http://localhost:3000/` con la versión de producción (`npm run build` y `npm run start`).
+
+| Dispositivo | Rendimiento | Accesibilidad | Buenas prácticas | SEO |
+|-------------|-------------|---------------|------------------|-----|
+| Escritorio | 97 | 100 | 96 | 100 |
+| Móvil | 66 | 100 | 96 | 100 |
+
+Métricas principales:
+
+| Dispositivo | FCP | LCP | TBT | CLS | Speed Index |
+|-------------|-----|-----|-----|-----|-------------|
+| Escritorio | 0.3 s | 1.3 s | 10 ms | 0 | 0.6 s |
+| Móvil | 0.8 s | 6.0 s | 490 ms | 0 | 1.6 s |
+
+En móvil, el principal punto a mejorar es el LCP (6.0 s) y el TBT (490 ms). El resto de las métricas está en rango bueno.
+
+## Autor
+
+Henry Guzman — Bootcamp-FSJ35
